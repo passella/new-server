@@ -24,17 +24,9 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2
-    
+
       - name: Build with Gradle
         run: ./gradlew build
-
-      - name: Check for changes against master
-        run: |
-          git fetch origin master:master
-          if [ $(git rev-list --right-only --count master...HEAD) -eq 0 ]; then
-            echo "No changes to create a PR. Branch is not ahead of master."
-            exit 1
-          fi
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v5
