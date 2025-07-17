@@ -40,5 +40,5 @@ jobs:
             Changes included in this PR:
             ${{ github.event.head_commit.message }}
           base: master
-          branch: automated-pr/${{ github.ref_name }}
+          branch: ${{ github.ref_name }}
           delete-branch: true
