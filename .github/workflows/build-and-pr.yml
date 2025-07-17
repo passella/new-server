@@ -39,6 +39,14 @@ jobs:
             echo "Found $COUNT commits ahead of master. Proceeding with PR creation."
           fi
 
+      - name: Add dummy commit to force PR creation
+        run: |
+          git checkout -b temp-pr-branch
+          echo "Automated dummy commit for PR creation from ${{ github.ref_name }}" > dummy.txt
+          git add dummy.txt
+          git commit -m "Dummy commit to force PR creation"
+          git push origin temp-pr-branch
+
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v5
         with:
