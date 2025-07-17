@@ -24,5 +24,15 @@ kotlin {
 }
 
 application {
-    mainClass.set("br.com.passella.server.ApplicationKt")
+    mainClass.set("br.com.passella.payments.ApplicationKt")
+}
+
+tasks.jar {
+    manifest {
+        attributes["Main-Class"] = "br.com.passella.payments.ApplicationKt"
+    }
+
+    from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) })
+
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

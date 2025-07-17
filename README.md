@@ -14,6 +14,29 @@ Este projeto implementa um servidor de pagamentos utilizando uma arquitetura hex
 
 A aplicação é projetada para lidar com alto volume de requisições de pagamentos com latência mínima e uso eficiente de recursos.
 
+## CI/CD com GitHub Actions
+
+Este projeto utiliza GitHub Actions para automatizar o processo de build e publicação de imagens Docker. A cada commit no branch principal (main/master), o workflow executa:
+
+1. Build do projeto Kotlin com Gradle
+2. Build da imagem Docker
+3. Publicação da imagem no GitHub Container Registry (ghcr.io)
+
+### URLs das Imagens Docker
+
+Após cada commit bem-sucedido, as imagens Docker são publicadas nos seguintes formatos:
+
+- **Tag baseada no SHA do commit**: `ghcr.io/[seu-usuario]/[nome-do-repo]:sha-[short-sha]`
+- **Tag baseada no branch**: `ghcr.io/[seu-usuario]/[nome-do-repo]:[branch-name]`
+- **Tag latest**: `ghcr.io/[seu-usuario]/[nome-do-repo]:latest`
+
+Para usar a imagem Docker mais recente:
+
+```bash
+docker pull ghcr.io/[seu-usuario]/[nome-do-repo]:latest
+docker run -p 8080:8080 ghcr.io/[seu-usuario]/[nome-do-repo]:latest
+```
+
 ## Características
 
 - **Alta Performance**: Otimizado para processamento rápido de requisições HTTP
@@ -44,6 +67,13 @@ A aplicação é projetada para lidar com alto volume de requisições de pagame
 java -jar build/libs/payment-server-1.0-SNAPSHOT.jar
 ```
 
+### Via Docker
+
+```bash
+docker pull ghcr.io/[seu-usuario]/[nome-do-repo]:latest
+docker run -p 8080:8080 ghcr.io/[seu-usuario]/[nome-do-repo]:latest
+```
+
 ### Configuração
 
 A aplicação pode ser configurada através de variáveis de ambiente:
@@ -58,6 +88,12 @@ Exemplo:
 
 ```bash
 APP_PORT=9090 APP_LOG_LEVEL=DEBUG ./gradlew run
+```
+
+Com Docker:
+
+```bash
+docker run -p 9090:9090 -e APP_PORT=9090 -e APP_LOG_LEVEL=DEBUG ghcr.io/[seu-usuario]/[nome-do-repo]:latest
 ```
 
 ## API de Pagamentos
