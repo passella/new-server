@@ -1,9 +1,9 @@
-package br.com.passella.payments.handers
+package br.com.passella.payments.hander
 
 import br.com.passella.fastlogger.FastLogger
-import br.com.passella.httpserver.HttpHandler
-import br.com.passella.httpserver.HttpRequest
-import br.com.passella.httpserver.HttpResponse
+import br.com.passella.httpserver.core.HttpHandler
+import br.com.passella.httpserver.core.model.HttpRequest
+import br.com.passella.httpserver.core.model.HttpResponse
 
 class PaymentsHandler : HttpHandler {
     override fun handle(

@@ -1,4 +1,11 @@
-package br.com.passella.httpserver
+package br.com.passella.httpserver.adapter.input
+
+import br.com.passella.httpserver.core.HttpHandler
+import br.com.passella.httpserver.core.RequestPathHandler
+import br.com.passella.httpserver.core.model.HttpRequest
+import br.com.passella.httpserver.core.model.HttpResponse
+import br.com.passella.httpserver.handler.DefaultErrorHandler
+import br.com.passella.httpserver.handler.DefaultNotFoundHandler
 
 class RequestPathHandlerImpl : RequestPathHandler {
     private val routes: MutableMap<Pair<String, String>, HttpHandler> = mutableMapOf()

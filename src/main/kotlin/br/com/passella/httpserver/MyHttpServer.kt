@@ -2,6 +2,12 @@ package br.com.passella.httpserver
 
 import br.com.passella.fastlogger.FastLogger
 import br.com.passella.httpserver.config.HttpServerConfiguration
+import br.com.passella.httpserver.core.HttpHandler
+import br.com.passella.httpserver.core.MyHttpServerExecutorServiceProvider
+import br.com.passella.httpserver.core.RequestParser
+import br.com.passella.httpserver.core.RequestPathHandler
+import br.com.passella.httpserver.core.model.HttpRequest
+import br.com.passella.httpserver.core.model.HttpResponse
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.PrintWriter

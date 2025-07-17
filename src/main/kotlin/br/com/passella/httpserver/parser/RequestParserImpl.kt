@@ -1,7 +1,10 @@
-package br.com.passella.httpserver
+package br.com.passella.httpserver.parser
 
 import br.com.passella.fastlogger.FastLogger
+import br.com.passella.httpserver.core.RequestParser
+import br.com.passella.httpserver.core.model.HttpRequest
 import java.io.BufferedReader
+import java.net.Socket
 
 class RequestParserImpl : RequestParser {
     companion object {
@@ -38,6 +41,8 @@ class RequestParserImpl : RequestParser {
         logger.debug { "Headers: $headers" }
         logger.debug { "Body: $body" }
 
-        return HttpRequest(method, path, headers, body)
+        // Note: This is a temporary solution as we need a Socket instance
+        // In a real implementation, the Socket should be passed to this method
+        return HttpRequest(method, path, "", headers, body, Socket())
     }
 }

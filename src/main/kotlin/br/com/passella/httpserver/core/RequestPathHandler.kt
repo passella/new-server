@@ -1,4 +1,7 @@
-package br.com.passella.httpserver
+package br.com.passella.httpserver.core
+
+import br.com.passella.httpserver.core.model.HttpRequest
+import br.com.passella.httpserver.core.model.HttpResponse
 
 interface RequestPathHandler {
     fun handler(

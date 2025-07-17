@@ -1,4 +1,4 @@
-package br.com.passella.httpserver
+package br.com.passella.httpserver.core
 
 import java.util.concurrent.ExecutorService
 

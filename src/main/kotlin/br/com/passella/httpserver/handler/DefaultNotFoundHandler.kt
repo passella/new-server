@@ -1,4 +1,8 @@
-package br.com.passella.httpserver
+package br.com.passella.httpserver.handler
+
+import br.com.passella.httpserver.core.HttpHandler
+import br.com.passella.httpserver.core.model.HttpRequest
+import br.com.passella.httpserver.core.model.HttpResponse
 
 class DefaultNotFoundHandler : HttpHandler {
     override fun handle(

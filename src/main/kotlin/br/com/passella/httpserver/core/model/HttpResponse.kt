@@ -1,4 +1,4 @@
-package br.com.passella.httpserver
+package br.com.passella.httpserver.core.model
 
 import java.io.PrintWriter
 
@@ -49,8 +49,8 @@ class HttpResponse(
         output.flush()
     }
 
-    private fun getStatusText(statusCode: Int): String =
-        when (statusCode) {
+    private fun getStatusText(statusCode: Int): String {
+        return when (statusCode) {
             200 -> "OK"
             201 -> "Created"
             204 -> "No Content"
@@ -61,4 +61,5 @@ class HttpResponse(
             500 -> "Internal Server Error"
             else -> "Unknown"
         }
+    }
 }
