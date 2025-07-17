@@ -1,9 +1,10 @@
 package br.com.passella.httpserver.core.model
 
-import java.io.PrintWriter
+import java.io.BufferedOutputStream
+import java.nio.charset.StandardCharsets
 
 class HttpResponse(
-    private val output: PrintWriter,
+    private val output: BufferedOutputStream,
 ) {
     private var statusCode: Int = 200
     private var statusText: String = "OK"
@@ -45,12 +46,16 @@ class HttpResponse(
                 append(body)
             }
 
-        output.print(responseText)
+        val responseBytes = responseText.toByteArray(StandardCharsets.UTF_8)
+        output.write(responseBytes)
+    }
+
+    fun flush() {
         output.flush()
     }
 
-    private fun getStatusText(statusCode: Int): String {
-        return when (statusCode) {
+    private fun getStatusText(statusCode: Int): String =
+        when (statusCode) {
             200 -> "OK"
             201 -> "Created"
             204 -> "No Content"
@@ -61,5 +66,4 @@ class HttpResponse(
             500 -> "Internal Server Error"
             else -> "Unknown"
         }
-    }
 }

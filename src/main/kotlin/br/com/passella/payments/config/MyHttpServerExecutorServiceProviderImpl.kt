@@ -5,5 +5,7 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 class MyHttpServerExecutorServiceProviderImpl : MyHttpServerExecutorServiceProvider {
-    override fun getExecutorService(): ExecutorService = Executors.newVirtualThreadPerTaskExecutor()
+    private val executor: ExecutorService by lazy { Executors.newVirtualThreadPerTaskExecutor() }
+
+    override fun getExecutorService(): ExecutorService = executor
 }

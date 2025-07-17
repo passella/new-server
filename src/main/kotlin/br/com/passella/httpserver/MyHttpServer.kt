@@ -7,9 +7,10 @@ import br.com.passella.httpserver.core.MyHttpServerExecutorServiceProvider
 import br.com.passella.httpserver.core.RequestParser
 import br.com.passella.httpserver.core.RequestPathHandler
 import br.com.passella.httpserver.core.model.HttpResponse
+import java.io.BufferedOutputStream
 import java.io.BufferedReader
+import java.io.IOException
 import java.io.InputStreamReader
-import java.io.PrintWriter
 import java.net.ServerSocket
 import java.net.Socket
 import java.util.concurrent.ExecutorService
@@ -22,6 +23,7 @@ class MyHttpServer(
     private val requestParser: RequestParser,
 ) {
     private val executor: ExecutorService = myHttpServerExecutorServiceProvider.getExecutorService()
+    private var serverSocket: ServerSocket? = null
 
     fun handler(
         method: String,
@@ -37,14 +39,19 @@ class MyHttpServer(
         logger.info { "Iniciando servidor na porta $port com Java ${System.getProperty("java.version")}" }
 
         try {
-            ServerSocket(port).use { serverSocket ->
-                logger.info { "Servidor iniciado e aguardando conexões" }
-                while (true) {
-                    val socket = serverSocket.accept()
-                    executor.submit { handleConnection(socket) }
+            serverSocket =
+                ServerSocket(port, configuration.backlog).apply {
+                    soTimeout = configuration.socketTimeoutMs
+                    reuseAddress = configuration.reuseAddress
+                    setReceiveBufferSize(configuration.receiveBufferSize)
                 }
+            logger.info { "Servidor iniciado e aguardando conexões" }
+            while (true) {
+                val socket = serverSocket?.accept() ?: break
+                executor.submit { handleConnection(socket) }
             }
         } finally {
+            serverSocket?.close()
             shutdownExecutor()
         }
     }
@@ -52,8 +59,10 @@ class MyHttpServer(
     private fun handleConnection(socket: Socket) {
         try {
             socket.use { clientSocket ->
+                clientSocket.soTimeout = configuration.socketTimeoutMs
+                clientSocket.setReceiveBufferSize(configuration.receiveBufferSize)
                 val input = BufferedReader(InputStreamReader(clientSocket.getInputStream()))
-                val output = PrintWriter(clientSocket.getOutputStream(), true)
+                val output = BufferedOutputStream(clientSocket.getOutputStream(), 8192)
 
                 val request = requestParser.parseRequest(input)
                 val response = HttpResponse(output)
@@ -64,10 +73,14 @@ class MyHttpServer(
                 } catch (e: Exception) {
                     logger.error(e) { "Erro ao processar requisição: ${request.method} ${request.path}" }
                     requestPathHandler.handleError(request, response)
+                } finally {
+                    response.flush()
                 }
             }
+        } catch (e: IOException) {
+            logger.error(e) { "Erro de I/O ao processar conexão" }
         } catch (e: Exception) {
-            logger.error(e) { "Erro ao processar conexão" }
+            logger.error(e) { "Erro inesperado ao processar conexão" }
         }
     }
 
