@@ -1,9 +1,15 @@
 package br.com.passella.fastlogger
 
+import java.time.Instant
 import java.time.LocalDateTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 
 object FastLogger {
     enum class Level(
@@ -19,14 +25,10 @@ object FastLogger {
 
     private val enabled = AtomicBoolean(true)
     private var globalLevel = Level.INFO
-
     private val levelOverrides = ConcurrentHashMap<String, Level>()
-
-    val dateFormatter: DateTimeFormatter
-        get() = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
-
-    val threadLocalBuilder: ThreadLocal<StringBuilder>
-        get() = ThreadLocal.withInitial { StringBuilder(256) }
+    private val logQueue = ConcurrentLinkedQueue<LogEntry>()
+    val lastTimestamp = AtomicLong(System.currentTimeMillis())
+    private val dateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
 
     init {
         val envLevel = System.getenv("APP_LOG_LEVEL")?.uppercase()
@@ -36,6 +38,11 @@ object FastLogger {
             try {
                 globalLevel = Level.valueOf(configLevel)
             } catch (_: IllegalArgumentException) {
+                if (enabled.get()) {
+                    System.err.println(
+                        "[FastLogger] Nível de log inválido configurado: $configLevel. Mantendo padrão INFO.",
+                    )
+                }
             }
         }
 
@@ -45,16 +52,51 @@ object FastLogger {
         if (configEnabled != null) {
             enabled.set(configEnabled.equals("true", ignoreCase = true))
         }
+
+        startLogProcessor()
+    }
+
+    private fun startLogProcessor() {
+        val executor = Executors.newSingleThreadScheduledExecutor { Thread(it, "LogProcessor") }
+        executor.scheduleAtFixedRate({
+            processLogQueue()
+        }, 0, 100, TimeUnit.MILLISECONDS)
+
+        // Atualiza timestamp a cada segundo
+        executor.scheduleAtFixedRate({
+            lastTimestamp.set(System.currentTimeMillis())
+        }, 0, 1, TimeUnit.SECONDS)
+    }
+
+    private fun processLogQueue() {
+        while (logQueue.isNotEmpty()) {
+            val entry = logQueue.poll() ?: break
+            val timestamp = formatTimestamp(entry.timestamp)
+            val message = "[$timestamp] [${entry.level.name}] [${entry.loggerName}] ${entry.message}"
+            System.out.println(message)
+        }
+    }
+
+    private fun formatTimestamp(timestamp: Long): String {
+        val instant = Instant.ofEpochMilli(timestamp)
+        val dateTime = LocalDateTime.ofInstant(instant, ZoneId.systemDefault())
+        return dateFormatter.format(dateTime)
     }
 
     fun getLogger(clazz: Class<*>): Logger = Logger(clazz.name)
+
+    data class LogEntry(
+        val timestamp: Long,
+        val level: Level,
+        val loggerName: String,
+        val message: String,
+    )
 
     class Logger(
         val name: String,
     ) {
         fun isEnabled(level: Level): Boolean {
             if (!enabled.get()) return false
-
             val effectiveLevel = levelOverrides[name] ?: globalLevel
             return level.value >= effectiveLevel.value
         }
@@ -64,21 +106,7 @@ object FastLogger {
             message: () -> String,
         ) {
             if (!isEnabled(level)) return
-
-            val sb = threadLocalBuilder.get()
-            sb.setLength(0)
-
-            sb
-                .append('[')
-                .append(dateFormatter.format(LocalDateTime.now()))
-                .append("] [")
-                .append(level.name)
-                .append("] [")
-                .append(name)
-                .append("] ")
-                .append(message())
-
-            System.out.println(sb.toString())
+            enqueueLog(lastTimestamp.get(), level, name, message())
         }
 
         inline fun trace(message: () -> String) {
@@ -106,14 +134,18 @@ object FastLogger {
             message: () -> String,
         ) {
             if (isEnabled(Level.ERROR)) {
-                val sb = StringBuilder()
-                sb
-                    .append(message())
-                    .append("\n")
-                    .append(throwable.stackTraceToString())
-
-                log(Level.ERROR) { sb.toString() }
+                val errorMessage = "${message()}\n${throwable.stackTraceToString().take(1000)}"
+                log(Level.ERROR) { errorMessage }
             }
+        }
+
+        fun enqueueLog(
+            timestamp: Long,
+            level: Level,
+            loggerName: String,
+            message: String,
+        ) {
+            logQueue.offer(LogEntry(timestamp, level, loggerName, message))
         }
     }
 }
