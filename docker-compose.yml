@@ -1,0 +1,17 @@
+services:
+  new-server:
+    image: ghcr.io/passella/new-server:latest
+    container_name: new-server
+    ports:
+      - "8080:8080"
+    deploy:
+      resources:
+        limits:
+          memory: 16M
+    restart: unless-stopped
+    networks:
+      - new-server-network
+
+networks:
+  new-server-network:
+    driver: bridge
