@@ -33,16 +33,6 @@ class MyHttpServer(
         return this
     }
 
-    fun notFoundHandler(handler: HttpHandler): MyHttpServer {
-        requestPathHandler.notFoundHandler(handler)
-        return this
-    }
-
-    fun errorHandler(handler: HttpHandler): MyHttpServer {
-        requestPathHandler.errorHandler(handler)
-        return this
-    }
-
     fun start() {
         val port = configuration.port
         logger.info { "Iniciando servidor na porta $port com Java ${System.getProperty("java.version")}" }

@@ -6,13 +6,15 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 
 object FastLogger {
-    enum class Level(val value: Int) {
+    enum class Level(
+        val value: Int,
+    ) {
         TRACE(0),
         DEBUG(1),
         INFO(2),
         WARN(3),
         ERROR(4),
-        NONE(5)
+        NONE(5),
     }
 
     private val enabled = AtomicBoolean(true)
@@ -45,24 +47,11 @@ object FastLogger {
         }
     }
 
-    fun getLogger(clazz: Class<*>): Logger {
-        return Logger(clazz.name)
-    }
+    fun getLogger(clazz: Class<*>): Logger = Logger(clazz.name)
 
-    fun setLevel(className: String, level: Level) {
-        levelOverrides[className] = level
-    }
-
-    fun setGlobalLevel(level: Level) {
-        globalLevel = level
-    }
-
-    fun setEnabled(isEnabled: Boolean) {
-        enabled.set(isEnabled)
-    }
-
-    class Logger(val name: String) {
-
+    class Logger(
+        val name: String,
+    ) {
         fun isEnabled(level: Level): Boolean {
             if (!enabled.get()) return false
 
@@ -70,13 +59,17 @@ object FastLogger {
             return level.value >= effectiveLevel.value
         }
 
-        inline fun log(level: Level, message: () -> String) {
+        inline fun log(
+            level: Level,
+            message: () -> String,
+        ) {
             if (!isEnabled(level)) return
 
             val sb = threadLocalBuilder.get()
             sb.setLength(0)
 
-            sb.append('[')
+            sb
+                .append('[')
                 .append(dateFormatter.format(LocalDateTime.now()))
                 .append("] [")
                 .append(level.name)
@@ -108,10 +101,14 @@ object FastLogger {
             log(Level.ERROR, message)
         }
 
-        inline fun error(throwable: Throwable, message: () -> String) {
+        inline fun error(
+            throwable: Throwable,
+            message: () -> String,
+        ) {
             if (isEnabled(Level.ERROR)) {
                 val sb = StringBuilder()
-                sb.append(message())
+                sb
+                    .append(message())
                     .append("\n")
                     .append(throwable.stackTraceToString())
 
