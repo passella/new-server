@@ -1,1 +1,1 @@
-rootProject.name = "high-performance-server"
+rootProject.name = "new-server"
