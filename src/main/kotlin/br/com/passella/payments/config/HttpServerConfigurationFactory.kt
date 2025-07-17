@@ -5,7 +5,6 @@ import br.com.passella.fastlogger.FastLogger
 import br.com.passella.httpserver.config.HttpServerConfiguration
 
 object HttpServerConfigurationFactory {
-
     private val logger = FastLogger.getLogger(HttpServerConfigurationFactory::class.java)
 
     private const val DEFAULT_PORT = 8080
@@ -22,7 +21,7 @@ object HttpServerConfigurationFactory {
         val port = PropertyProvider.getIntProperty("APP_PORT", DEFAULT_PORT)
 
         if (port <= MIN_PORT_VALUE || port > MAX_PORT_VALUE) {
-            logger.warn { "Porta inválida configurada: $port. Usando porta padrão: $DEFAULT_PORT" }
+            logger.warn { "Porta inválida configurada: $port. Usando porta padrão: $DEFAULT_PORT!" }
             return DEFAULT_PORT
         }
 
