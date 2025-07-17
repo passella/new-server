@@ -6,7 +6,6 @@ import br.com.passella.httpserver.core.HttpHandler
 import br.com.passella.httpserver.core.MyHttpServerExecutorServiceProvider
 import br.com.passella.httpserver.core.RequestParser
 import br.com.passella.httpserver.core.RequestPathHandler
-import br.com.passella.httpserver.core.model.HttpRequest
 import br.com.passella.httpserver.core.model.HttpResponse
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -56,7 +55,7 @@ class MyHttpServer(
                 val input = BufferedReader(InputStreamReader(clientSocket.getInputStream()))
                 val output = PrintWriter(clientSocket.getOutputStream(), true)
 
-                val request: HttpRequest = requestParser.parseRequest(input)
+                val request = requestParser.parseRequest(input)
                 val response = HttpResponse(output)
 
                 try {
