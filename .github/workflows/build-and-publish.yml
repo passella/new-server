@@ -71,47 +71,25 @@ jobs:
           echo "::notice::Docker image published to: ghcr.io/${{ github.repository }}:latest"
 
       - name: Cleanup old Docker images
-        if: github.event_name == 'push'  # Execute only on push events, not on PRs
+        if: github.event_name == 'push'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Get the repository owner and name
           REPO_OWNER=$(echo "${{ github.repository }}" | cut -d'/' -f1)
           REPO_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
-          IMAGE_NAME="ghcr.io/${{ github.repository }}"
-          
-          # Fetch all tags for the image from GitHub Packages API
-          echo "Fetching tags for $IMAGE_NAME..."
-          TAGS=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
-            "https://api.github.com/orgs/$REPO_OWNER/packages/container/$REPO_NAME/versions" \
-            | jq -r '.[].metadata.container.tags[]' | sort -r)
-          
-          # Count total tags
-          TAG_COUNT=$(echo "$TAGS" | wc -l)
-          echo "Found $TAG_COUNT tags for the image."
-          
-          # If there are more than 5 tags, delete the oldest ones
-          if [ $TAG_COUNT -gt 5 ]; then
-            DELETE_COUNT=$((TAG_COUNT - 5))
-            echo "Deleting $DELETE_COUNT oldest tags to keep only the latest 5."
-            OLD_TAGS=$(echo "$TAGS" | tail -n $DELETE_COUNT)
-          
-            for TAG in $OLD_TAGS; do
-              echo "Deleting tag: $TAG"
-              # Get the version ID for the tag
-              VERSION_ID=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
-                "https://api.github.com/orgs/$REPO_OWNER/packages/container/$REPO_NAME/versions" \
-                | jq -r ".[] | select(.metadata.container.tags[] == \"$TAG\") | .id")
-          
-              if [ -n "$VERSION_ID" ]; then
-                # Delete the version (which removes the tag)
-                curl -s -X DELETE -H "Authorization: Bearer $GH_TOKEN" \
-                  "https://api.github.com/orgs/$REPO_OWNER/packages/container/$REPO_NAME/versions/$VERSION_ID"
-                echo "Deleted version ID $VERSION_ID for tag $TAG."
-              else
-                echo "Could not find version ID for tag $TAG. Skipping."
-              fi
+          PACKAGE_URL="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/packages/container/$REPO_NAME/versions"
+          VERSIONS=$(curl -s -H "Authorization: Bearer $GH_TOKEN" "$PACKAGE_URL")
+          TOTAL=$(echo "$VERSIONS" | jq length)
+          echo "Found $TOTAL versions for the image."
+          if [ $TOTAL -gt 5 ]; then
+            DELETE_COUNT=$((TOTAL - 5))
+            echo "Deleting $DELETE_COUNT oldest versions to keep only the latest 5."
+            OLDEST_VERSIONS=$(echo "$VERSIONS" | jq -r '.[] | [.id, .created_at] | @tsv' | sort -k2,2 | head -n $DELETE_COUNT | cut -f1)
+            for VERSION_ID in $OLDEST_VERSIONS; do
+              DELETE_URL="$PACKAGE_URL/$VERSION_ID"
+              curl -s -X DELETE -H "Authorization: Bearer $GH_TOKEN" "$DELETE_URL"
+              echo "Deleted version ID $VERSION_ID."
             done
           else
-            echo "No cleanup needed. Only $TAG_COUNT tags exist (less than or equal to 5)."
+            echo "No cleanup needed. Only $TOTAL versions exist (less than or equal to 5)."
           fi
