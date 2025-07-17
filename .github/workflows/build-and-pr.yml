@@ -1,4 +1,4 @@
-name: Build and Create PR
+name: Create PR on push
 
 on:
   push:
@@ -7,9 +7,8 @@ on:
       - main
 
 jobs:
-  build-and-pr:
+  create-pr:
     runs-on: ubuntu-latest
-    
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -29,32 +28,31 @@ jobs:
         run: ./gradlew build
 
       - name: Check for changes against master
+        id: check-changes
         run: |
           git fetch origin master:master
           COUNT=$(git rev-list --right-only --count master...HEAD)
           if [ $COUNT -eq 0 ]; then
             echo "No changes to create a PR. Branch is not ahead of master."
-            exit 1
+            echo "create_pr=false" >> $GITHUB_OUTPUT
           else
             echo "Found $COUNT commits ahead of master. Proceeding with PR creation."
+            echo "create_pr=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: Force push branch for PR
+      - name: Check if PR already exists
+        id: check-pr
+        if: steps.check-changes.outputs.create_pr == 'true'
         run: |
-          git checkout -b automated-pr/${{ github.ref_name }}
-          git push origin automated-pr/${{ github.ref_name }} --force
+          if gh pr list -H ${{ github.ref_name }} -B master --json number --jq '.[] | .number' | grep -q .; then
+            echo "pr_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "pr_exists=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: Automated PR from ${{ github.ref_name }}
-          title: '[Automated] PR from ${{ github.ref_name }}'
-          body: |
-            This is an automated pull request created from branch ${{ github.ref_name }}.
-            
-            Changes included in this PR:
-            ${{ github.event.head_commit.message }}
-          base: master
-          branch: automated-pr/${{ github.ref_name }}
-          delete-branch: true
+        if: steps.check-pr.outputs.pr_exists == 'false' && steps.check-changes.outputs.create_pr == 'true'
+        run: |
+          gh pr create -B master -H ${{ github.ref_name }} \
+            --title "[Automated] PR from ${{ github.ref_name }}" \
+            --body "This is an automated pull request created from branch ${{ github.ref_name }}.\n\nChanges included: ${{ github.event.head_commit.message }}"
