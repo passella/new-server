@@ -8,18 +8,6 @@ const queryDuration = new Trend('query_duration', true);
 
 export const options = {
     scenarios: {
-        // Cenário "rápido" para iterações frequentes (30s de estabilização)
-        /*        ramp_up_stabilize_down_fast: {
-                    executor: 'ramping-vus',
-                    startVUs: 1,
-                    stages: [
-                        {target: 1000, duration: '30s'},
-                        {target: 1000, duration: '30s'},
-                        {target: 0, duration: '30s'},
-                    ],
-                    gracefulRampDown: '5s',
-                },*/
-        // Cenário "longo" para testes aprofundados (60s de estabilização) - descomente para usar
         ramp_up_stabilize_down_long: {
             executor: 'ramping-vus',
             startVUs: 1,
