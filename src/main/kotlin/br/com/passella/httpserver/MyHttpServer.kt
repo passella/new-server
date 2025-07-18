@@ -7,11 +7,11 @@ import br.com.passella.httpserver.core.MyHttpServerExecutorServiceProvider
 import br.com.passella.httpserver.core.RequestParser
 import br.com.passella.httpserver.core.RequestPathHandler
 import br.com.passella.httpserver.core.model.HttpResponse
+import br.com.passella.httpserver.system.SystemInfoProvider
 import java.io.BufferedOutputStream
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
-import java.lang.management.ManagementFactory
 import java.net.ServerSocket
 import java.net.Socket
 import java.util.concurrent.ExecutorService
@@ -22,6 +22,7 @@ class MyHttpServer(
     myHttpServerExecutorServiceProvider: MyHttpServerExecutorServiceProvider,
     private val requestPathHandler: RequestPathHandler,
     private val requestParser: RequestParser,
+    private val systemInfoProvider: SystemInfoProvider,
 ) {
     private val executor: ExecutorService = myHttpServerExecutorServiceProvider.getExecutorService()
     private var serverSocket: ServerSocket? = null
@@ -37,7 +38,7 @@ class MyHttpServer(
 
     fun start() {
         val port = configuration.port
-        startLog(port)
+        logSystemInfo(port)
 
         try {
             serverSocket =
@@ -57,41 +58,12 @@ class MyHttpServer(
         }
     }
 
-    private fun startLog(port: Int) {
-        val runtime = Runtime.getRuntime()
-        val mb = 1024 * 1024
-        val maxMemory = runtime.maxMemory() / mb
-        val totalMemory = runtime.totalMemory() / mb
-        val freeMemory = runtime.freeMemory() / mb
-        val availableMemory = maxMemory - (totalMemory - freeMemory)
-
-        val processors = runtime.availableProcessors()
-        val osName = System.getProperty("os.name")
-        val osVersion = System.getProperty("os.version")
-        val osArch = System.getProperty("os.arch")
-
-        val memoryBean = ManagementFactory.getMemoryMXBean()
-        val heapMemoryUsage = memoryBean.heapMemoryUsage
-        val nonHeapMemoryUsage = memoryBean.nonHeapMemoryUsage
-
-        logger.info { "Iniciando servidor na porta $port com Java ${System.getProperty("java.version")}" }
-        logger.info { "Sistema Operacional: $osName $osVersion ($osArch)" }
-        logger.info { "Processadores disponíveis: $processors" }
-        logger.info { "Memória máxima: $maxMemory MB" }
-        logger.info { "Memória total alocada: $totalMemory MB" }
-        logger.info { "Memória livre: $freeMemory MB" }
-        logger.info { "Memória disponível: $availableMemory MB" }
-        logger.info {
-            "Heap: " +
-                "usado=${heapMemoryUsage.used / mb}MB, " +
-                "comprometido=${heapMemoryUsage.committed / mb}MB, " +
-                "max=${heapMemoryUsage.max / mb}MB"
-        }
-        logger.info {
-            "Non-Heap: " +
-                "usado=${nonHeapMemoryUsage.used / mb}MB, " +
-                "comprometido=${nonHeapMemoryUsage.committed / mb}MB, " +
-                "max=${if (nonHeapMemoryUsage.max < 0) "N/A" else nonHeapMemoryUsage.max / mb}MB"
+    private fun logSystemInfo(port: Int) {
+        val systemInfo = systemInfoProvider.getSystemInfo(port)
+        systemInfo.toString().lines().forEach { line ->
+            if (line.isNotEmpty()) {
+                logger.info { line }
+            }
         }
     }
 

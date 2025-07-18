@@ -1,6 +1,6 @@
 #!/bin/bash
 
-RUNS=3
+RUNS=7
 LOG_FILE="k6.log"
 REPORT_PREFIX="k6_report"
 
