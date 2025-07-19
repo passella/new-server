@@ -65,15 +65,11 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-      # Create GitHub Release
+      # Create GitHub Release - Simplified approach
       - name: Create GitHub Release
         if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-        id: create_release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DOCKER_IMAGE: ghcr.io/${{ github.repository }}:${{ env.VERSION }}
-          DOCKER_IMAGE_LATEST: ghcr.io/${{ github.repository }}:latest
-          DOCKER_DIGEST: ${{ steps.docker_build.outputs.digest }}
         run: |
           # Check if release already exists
           if ! gh release view v${{ env.VERSION }} &>/dev/null; then
@@ -85,42 +81,14 @@ jobs:
               COMMIT_LOG=$(git log --pretty=format:"* %s (%h)" $PREVIOUS_TAG..HEAD)
             fi
           
-            # Create release notes with Docker image information
-            cat > release_notes.md << EOF
-          # Release v${{ env.VERSION }}
+            # Create the release with simple notes
+            RELEASE_NOTES="# Docker Images\n\n- ghcr.io/${{ github.repository }}:${{ env.VERSION }}\n- ghcr.io/${{ github.repository }}:latest\n\n# Changes\n\n${COMMIT_LOG}\n\n# Usage\n\n\`\`\`bash\ndocker pull ghcr.io/${{ github.repository }}:${{ env.VERSION }}\ndocker run -p 8080:8080 ghcr.io/${{ github.repository }}:${{ env.VERSION }}\n\`\`\`"
           
-          ## Docker Image
-          
-          ```
-          $DOCKER_IMAGE
-          $DOCKER_IMAGE_LATEST
-          ```
-          
-          Image Digest: \`$DOCKER_DIGEST\`
-          
-          ## What's Changed
-          
-          $COMMIT_LOG
-          
-          ## Installation
-          
-          ```bash
-          docker pull $DOCKER_IMAGE
-          ```
-          
-          ## Running the Container
-          
-          ```bash
-          docker run -p 8080:8080 $DOCKER_IMAGE
-          ```
-          EOF
-          
-            # Create the release
+            # Create the release without attaching files
             gh release create v${{ env.VERSION }} \
               --title "Release v${{ env.VERSION }}" \
-              --notes-file release_notes.md \
-              --target ${{ github.sha }} \
-              build/libs/*.jar
+              --notes "$RELEASE_NOTES" \
+              --target ${{ github.sha }}
           
             echo "Created release v${{ env.VERSION }}"
           else
