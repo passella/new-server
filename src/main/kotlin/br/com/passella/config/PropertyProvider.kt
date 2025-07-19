@@ -9,7 +9,10 @@ object PropertyProvider {
     private val TRUE_VALUES = setOf("true", "yes", "y", "1")
     private val FALSE_VALUES = setOf("false", "no", "n", "0")
 
-    fun getProperty(key: String, defaultValue: String): String {
+    fun getProperty(
+        key: String,
+        defaultValue: String,
+    ): String {
         val envValue = System.getenv(key)
         val sysKey = key.lowercase().replace('_', '.')
         val sysValue = System.getProperty(sysKey)
@@ -27,7 +30,10 @@ object PropertyProvider {
         return result
     }
 
-    fun getIntProperty(key: String, defaultValue: Int): Int {
+    fun getIntProperty(
+        key: String,
+        defaultValue: Int,
+    ): Int {
         val stringValue = getProperty(key, defaultValue.toString())
 
         return try {
@@ -38,7 +44,10 @@ object PropertyProvider {
         }
     }
 
-    fun getBooleanProperty(key: String, defaultValue: Boolean): Boolean {
+    fun getBooleanProperty(
+        key: String,
+        defaultValue: Boolean,
+    ): Boolean {
         val stringValue = getProperty(key, defaultValue.toString())
         val lowercaseValue = stringValue.lowercase()
 
@@ -46,19 +55,28 @@ object PropertyProvider {
             TRUE_VALUES.contains(lowercaseValue) -> true
             FALSE_VALUES.contains(lowercaseValue) -> false
             else -> {
-                logger.warn { "Valor inválido para propriedade booleana '$key': '$stringValue'. Usando valor padrão: $defaultValue" }
+                logger.warn {
+                    "Valor inválido para propriedade booleana '$key': '$stringValue'. " +
+                        "Usando valor padrão: $defaultValue"
+                }
                 defaultValue
             }
         }
     }
 
-    inline fun <reified T : Enum<T>> getEnumProperty(key: String, defaultValue: T): T {
+    inline fun <reified T : Enum<T>> getEnumProperty(
+        key: String,
+        defaultValue: T,
+    ): T {
         val stringValue = getProperty(key, defaultValue.name)
 
         return try {
             java.lang.Enum.valueOf(T::class.java, stringValue.uppercase())
-        } catch (e: IllegalArgumentException) {
-            logger.warn { "Valor inválido para propriedade enum '$key': '$stringValue'. Usando valor padrão: ${defaultValue.name}" }
+        } catch (_: IllegalArgumentException) {
+            logger.warn {
+                "Valor inválido para propriedade enum '$key': '$stringValue'. " +
+                    "Usando valor padrão: ${defaultValue.name}"
+            }
             defaultValue
         }
     }
