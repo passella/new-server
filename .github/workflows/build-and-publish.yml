@@ -10,7 +10,7 @@ jobs:
   build-and-publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write  # Upgraded from read to write for creating releases
       packages: write
 
     steps:
@@ -64,32 +64,75 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
+      # Extract Docker image digest for the release notes
+      - name: Extract Docker image digest
+        id: image_digest
+        run: |
+          DIGEST=$(docker inspect ghcr.io/${{ github.repository }}:${{ env.VERSION }} --format='{{index .RepoDigests 0}}' | cut -d'@' -f2)
+          echo "DIGEST=$DIGEST" >> $GITHUB_ENV
+          echo "digest=$DIGEST" >> $GITHUB_OUTPUT
+
+      # Create GitHub Release
+      - name: Create GitHub Release
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        id: create_release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Check if release already exists
+          if ! gh release view v${{ env.VERSION }} &>/dev/null; then
+            # Get commit history since last tag for release notes
+            PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+            if [ -z "$PREVIOUS_TAG" ]; then
+              COMMIT_LOG=$(git log --pretty=format:"* %s (%h)" -10)
+            else
+              COMMIT_LOG=$(git log --pretty=format:"* %s (%h)" $PREVIOUS_TAG..HEAD)
+            fi
+          
+            # Create release notes with Docker image information
+            cat > release_notes.md << EOF
+          # Release v${{ env.VERSION }}
+          
+          ## Docker Image
+          
+          ```
+          ghcr.io/${{ github.repository }}:${{ env.VERSION }}
+          ghcr.io/${{ github.repository }}:latest
+          ```
+          
+          Image Digest: \`${{ env.DIGEST }}\`
+          
+          ## What's Changed
+          
+          $COMMIT_LOG
+          
+          ## Installation
+          
+          ```bash
+          docker pull ghcr.io/${{ github.repository }}:${{ env.VERSION }}
+          ```
+          
+          ## Running the Container
+          
+          ```bash
+          docker run -p 8080:8080 ghcr.io/${{ github.repository }}:${{ env.VERSION }}
+          ```
+          EOF
+          
+            # Create the release
+            gh release create v${{ env.VERSION }} \
+              --title "Release v${{ env.VERSION }}" \
+              --notes-file release_notes.md \
+              --target ${{ github.sha }} \
+              build/libs/*.jar
+          
+            echo "Created release v${{ env.VERSION }}"
+          else
+            echo "Release v${{ env.VERSION }} already exists, skipping release creation"
+          fi
+
       - name: Display Docker Image URL
         run: |
           echo "::notice::Docker image published to: ghcr.io/${{ github.repository }}:sha-${{ github.sha }}"
           echo "::notice::Docker image published to: ghcr.io/${{ github.repository }}:${{ env.VERSION }}"
           echo "::notice::Docker image published to: ghcr.io/${{ github.repository }}:latest"
-
-      - name: Cleanup old Docker images
-        if: github.event_name == 'push'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          REPO_OWNER=$(echo "${{ github.repository }}" | cut -d'/' -f1)
-          REPO_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
-          PACKAGE_URL="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/packages/container/$REPO_NAME/versions"
-          VERSIONS=$(curl -s -H "Authorization: Bearer $GH_TOKEN" "$PACKAGE_URL")
-          TOTAL=$(echo "$VERSIONS" | jq length)
-          echo "Found $TOTAL versions for the image."
-          if [ $TOTAL -gt 5 ]; then
-            DELETE_COUNT=$((TOTAL - 5))
-            echo "Deleting $DELETE_COUNT oldest versions to keep only the latest 5."
-            OLDEST_VERSIONS=$(echo "$VERSIONS" | jq -r '.[] | [.id, .created_at] | @tsv' | sort -k2,2 | head -n $DELETE_COUNT | cut -f1)
-            for VERSION_ID in $OLDEST_VERSIONS; do
-              DELETE_URL="$PACKAGE_URL/$VERSION_ID"
-              curl -s -X DELETE -H "Authorization: Bearer $GH_TOKEN" "$DELETE_URL"
-              echo "Deleted version ID $VERSION_ID."
-            done
-          else
-            echo "No cleanup needed. Only $TOTAL versions exist (less than or equal to 5)."
-          fi
