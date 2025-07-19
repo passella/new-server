@@ -65,7 +65,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-      # Create GitHub Release - Simplified approach
+      # Create GitHub Release - Improved approach
       - name: Create GitHub Release
         if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
         env:
@@ -76,18 +76,41 @@ jobs:
             # Get commit history since last tag for release notes
             PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
             if [ -z "$PREVIOUS_TAG" ]; then
-              COMMIT_LOG=$(git log --pretty=format:"* %s (%h)" -10)
+              COMMIT_LOG=$(git log --pretty=format:"* %s ([%h](https://github.com/${{ github.repository }}/commit/%H))" -10)
             else
-              COMMIT_LOG=$(git log --pretty=format:"* %s (%h)" $PREVIOUS_TAG..HEAD)
+              COMMIT_LOG=$(git log --pretty=format:"* %s ([%h](https://github.com/${{ github.repository }}/commit/%H))" $PREVIOUS_TAG..HEAD)
             fi
           
-            # Create the release with simple notes
-            RELEASE_NOTES="# Docker Images\n\n- ghcr.io/${{ github.repository }}:${{ env.VERSION }}\n- ghcr.io/${{ github.repository }}:latest\n\n# Changes\n\n${COMMIT_LOG}\n\n# Usage\n\n\`\`\`bash\ndocker pull ghcr.io/${{ github.repository }}:${{ env.VERSION }}\ndocker run -p 8080:8080 ghcr.io/${{ github.repository }}:${{ env.VERSION }}\n\`\`\`"
+            # Create release notes with proper escaping for YAML
+            cat > release_notes.md << EOF
+          ## Release v${{ env.VERSION }}
+
+          ### Docker Images
+          ```
+          ghcr.io/${{ github.repository }}:${{ env.VERSION }}
+          ghcr.io/${{ github.repository }}:latest
+          ```
+
+          ### Changes
+          ${COMMIT_LOG}
+
+          ### Installation & Usage
+          ```bash
+          # Pull the Docker image
+          docker pull ghcr.io/${{ github.repository }}:${{ env.VERSION }}
+
+          # Run the server (exposing port 8080)
+          docker run -p 8080:8080 ghcr.io/${{ github.repository }}:${{ env.VERSION }}
+          ```
+
+          ### Documentation
+          For more information, please refer to the [project documentation](https://github.com/${{ github.repository }}/blob/main/README.md).
+          EOF
           
-            # Create the release without attaching files
+            # Create the release using the file
             gh release create v${{ env.VERSION }} \
               --title "Release v${{ env.VERSION }}" \
-              --notes "$RELEASE_NOTES" \
+              --notes-file release_notes.md \
               --target ${{ github.sha }}
           
             echo "Created release v${{ env.VERSION }}"
