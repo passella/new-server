@@ -3,13 +3,16 @@ package br.com.passella.httpserver.system
 import java.lang.management.ManagementFactory
 
 class DefaultSystemInfoProvider : SystemInfoProvider {
+    companion object {
+        private const val BYTES_IN_MEGABYTE = 1024 * 1024
+    }
+
     override fun getSystemInfo(serverPort: Int): SystemInfo {
-        val mb = 1024 * 1024
         val runtime = Runtime.getRuntime()
-        
-        val maxMemory = runtime.maxMemory() / mb
-        val totalMemory = runtime.totalMemory() / mb
-        val freeMemory = runtime.freeMemory() / mb
+
+        val maxMemory = runtime.maxMemory() / BYTES_IN_MEGABYTE
+        val totalMemory = runtime.totalMemory() / BYTES_IN_MEGABYTE
+        val freeMemory = runtime.freeMemory() / BYTES_IN_MEGABYTE
         val availableMemory = maxMemory - (totalMemory - freeMemory)
 
         val processors = runtime.availableProcessors()
@@ -32,17 +35,24 @@ class DefaultSystemInfoProvider : SystemInfoProvider {
             totalMemoryMb = totalMemory,
             freeMemoryMb = freeMemory,
             availableMemoryMb = availableMemory,
-            heapMemoryUsage = MemoryUsageInfo(
-                usedMb = heapMemoryUsage.used / mb,
-                committedMb = heapMemoryUsage.committed / mb,
-                maxMb = (heapMemoryUsage.max / mb).toString()
-            ),
-            nonHeapMemoryUsage = MemoryUsageInfo(
-                usedMb = nonHeapMemoryUsage.used / mb,
-                committedMb = nonHeapMemoryUsage.committed / mb,
-                maxMb = if (nonHeapMemoryUsage.max < 0) "N/A" else (nonHeapMemoryUsage.max / mb).toString()
-            ),
-            serverPort = serverPort
+            heapMemoryUsage =
+                MemoryUsageInfo(
+                    usedMb = heapMemoryUsage.used / BYTES_IN_MEGABYTE,
+                    committedMb = heapMemoryUsage.committed / BYTES_IN_MEGABYTE,
+                    maxMb = (heapMemoryUsage.max / BYTES_IN_MEGABYTE).toString(),
+                ),
+            nonHeapMemoryUsage =
+                MemoryUsageInfo(
+                    usedMb = nonHeapMemoryUsage.used / BYTES_IN_MEGABYTE,
+                    committedMb = nonHeapMemoryUsage.committed / BYTES_IN_MEGABYTE,
+                    maxMb =
+                        if (nonHeapMemoryUsage.max < 0) {
+                            "N/A"
+                        } else {
+                            (nonHeapMemoryUsage.max / BYTES_IN_MEGABYTE).toString()
+                        },
+                ),
+            serverPort = serverPort,
         )
     }
 }

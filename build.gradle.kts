@@ -18,6 +18,7 @@ repositories {
 dependencies {
     implementation(kotlin("stdlib"))
     testImplementation(kotlin("test"))
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.19.1")
 }
 
 tasks.test {
