@@ -57,6 +57,7 @@ jobs:
             ${{ env.VERSION }}
 
       - name: Build and push Docker image
+        id: docker_build
         uses: docker/build-push-action@v4
         with:
           context: .
@@ -64,20 +65,15 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-      # Extract Docker image digest for the release notes
-      - name: Extract Docker image digest
-        id: image_digest
-        run: |
-          DIGEST=$(docker inspect ghcr.io/${{ github.repository }}:${{ env.VERSION }} --format='{{index .RepoDigests 0}}' | cut -d'@' -f2)
-          echo "DIGEST=$DIGEST" >> $GITHUB_ENV
-          echo "digest=$DIGEST" >> $GITHUB_OUTPUT
-
       # Create GitHub Release
       - name: Create GitHub Release
         if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
         id: create_release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DOCKER_IMAGE: ghcr.io/${{ github.repository }}:${{ env.VERSION }}
+          DOCKER_IMAGE_LATEST: ghcr.io/${{ github.repository }}:latest
+          DOCKER_DIGEST: ${{ steps.docker_build.outputs.digest }}
         run: |
           # Check if release already exists
           if ! gh release view v${{ env.VERSION }} &>/dev/null; then
@@ -96,11 +92,11 @@ jobs:
           ## Docker Image
           
           ```
-          ghcr.io/${{ github.repository }}:${{ env.VERSION }}
-          ghcr.io/${{ github.repository }}:latest
+          $DOCKER_IMAGE
+          $DOCKER_IMAGE_LATEST
           ```
           
-          Image Digest: \`${{ env.DIGEST }}\`
+          Image Digest: \`$DOCKER_DIGEST\`
           
           ## What's Changed
           
@@ -109,13 +105,13 @@ jobs:
           ## Installation
           
           ```bash
-          docker pull ghcr.io/${{ github.repository }}:${{ env.VERSION }}
+          docker pull $DOCKER_IMAGE
           ```
           
           ## Running the Container
           
           ```bash
-          docker run -p 8080:8080 ghcr.io/${{ github.repository }}:${{ env.VERSION }}
+          docker run -p 8080:8080 $DOCKER_IMAGE
           ```
           EOF
           
