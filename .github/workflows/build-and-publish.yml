@@ -2,15 +2,15 @@ name: Build and Publish Docker Image
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ master ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ master ]
 
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # Upgraded from read to write for creating releases
+      contents: write
       packages: write
 
     steps:
@@ -65,15 +65,12 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-      # Create GitHub Release - Improved approach
-      - name: Create GitHub Release
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+      - name: Criar Release no GitHub
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/master')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Check if release already exists
           if ! gh release view v${{ env.VERSION }} &>/dev/null; then
-            # Get commit history since last tag for release notes
             PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
             if [ -z "$PREVIOUS_TAG" ]; then
               COMMIT_LOG=$(git log --pretty=format:"* %s ([%h](https://github.com/${{ github.repository }}/commit/%H))" -10)
@@ -81,43 +78,41 @@ jobs:
               COMMIT_LOG=$(git log --pretty=format:"* %s ([%h](https://github.com/${{ github.repository }}/commit/%H))" $PREVIOUS_TAG..HEAD)
             fi
           
-            # Create a simpler release notes format to avoid heredoc issues
-            echo "## Release v${{ env.VERSION }}" > release_notes.md
+            echo "## Versão v${{ env.VERSION }}" > release_notes.md
             echo "" >> release_notes.md
-            echo "### Docker Images" >> release_notes.md
+            echo "### Imagens Docker" >> release_notes.md
             echo '```' >> release_notes.md
             echo "ghcr.io/${{ github.repository }}:${{ env.VERSION }}" >> release_notes.md
             echo "ghcr.io/${{ github.repository }}:latest" >> release_notes.md
             echo '```' >> release_notes.md
             echo "" >> release_notes.md
-            echo "### Changes" >> release_notes.md
+            echo "### Alterações" >> release_notes.md
             echo "${COMMIT_LOG}" >> release_notes.md
             echo "" >> release_notes.md
-            echo "### Installation & Usage" >> release_notes.md
+            echo "### Instalação e Uso" >> release_notes.md
             echo '```bash' >> release_notes.md
-            echo "# Pull the Docker image" >> release_notes.md
+            echo "# Baixar a imagem Docker" >> release_notes.md
             echo "docker pull ghcr.io/${{ github.repository }}:${{ env.VERSION }}" >> release_notes.md
             echo "" >> release_notes.md
-            echo "# Run the server (exposing port 8080)" >> release_notes.md
+            echo "# Executar o servidor (expondo a porta 8080)" >> release_notes.md
             echo "docker run -p 8080:8080 ghcr.io/${{ github.repository }}:${{ env.VERSION }}" >> release_notes.md
             echo '```' >> release_notes.md
             echo "" >> release_notes.md
-            echo "### Documentation" >> release_notes.md
-            echo "For more information, please refer to the [project documentation](https://github.com/${{ github.repository }}/blob/main/README.md)." >> release_notes.md
+            echo "### Documentação" >> release_notes.md
+            echo "Para mais informações, consulte a [documentação do projeto](https://github.com/${{ github.repository }}/blob/master/README.md)." >> release_notes.md
           
-            # Create the release using the file
             gh release create v${{ env.VERSION }} \
-              --title "Release v${{ env.VERSION }}" \
+              --title "Versão v${{ env.VERSION }}" \
               --notes-file release_notes.md \
               --target ${{ github.sha }}
           
-            echo "Created release v${{ env.VERSION }}"
+            echo "Release v${{ env.VERSION }} criada com sucesso"
           else
-            echo "Release v${{ env.VERSION }} already exists, skipping release creation"
+            echo "Release v${{ env.VERSION }} já existe, pulando criação"
           fi
 
-      - name: Display Docker Image URL
+      - name: Exibir URL da Imagem Docker
         run: |
-          echo "::notice::Docker image published to: ghcr.io/${{ github.repository }}:sha-${{ github.sha }}"
-          echo "::notice::Docker image published to: ghcr.io/${{ github.repository }}:${{ env.VERSION }}"
-          echo "::notice::Docker image published to: ghcr.io/${{ github.repository }}:latest"
+          echo "::notice::Imagem Docker publicada em: ghcr.io/${{ github.repository }}:sha-${{ github.sha }}"
+          echo "::notice::Imagem Docker publicada em: ghcr.io/${{ github.repository }}:${{ env.VERSION }}"
+          echo "::notice::Imagem Docker publicada em: ghcr.io/${{ github.repository }}:latest"
